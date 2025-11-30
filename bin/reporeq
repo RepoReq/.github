@@ -6,7 +6,7 @@ set -euo pipefail
 
 readonly REQS="${1:-reporeq.txt}"
 readonly DEST=".reporeq"
-readonly TMP="$(mktemp -d)"
+readonly TMP="$(mktemp -d -p .)"
 
 if [[ ! -f "$REQS" ]]; then
     echo "Error: $REQS not found" >&2
@@ -19,10 +19,21 @@ while IFS= read -r line || [[ -n "$line" ]]; do
     line="${line%$'\r'}"
     [[ -z "$line" || "$line" =~ ^# ]] && continue
 
-    url="${line%@*}"
-    tag="${line##*@}"
-
-    if [[ "$line" =~ ^git@ ]] && [[ ! "$url" =~ : ]]; then
+    if [[ "$line" =~ ^git@ ]]; then
+        if [[ "$line" =~ ^(git@[^@]+)@([^@]+)$ ]]; then
+            url="${BASH_REMATCH[1]}"
+            tag="${BASH_REMATCH[2]}"
+        else
+            url="$line"
+            tag="$line"
+        fi
+    elif [[ "$line" =~ ^(https?://[^@]*@[^/]+/[^@]+)@([^@]+)$ ]]; then
+        url="${BASH_REMATCH[1]}"
+        tag="${BASH_REMATCH[2]}"
+    elif [[ "$line" =~ ^([^@]+)@([^@]+)$ ]]; then
+        url="${BASH_REMATCH[1]}"
+        tag="${BASH_REMATCH[2]}"
+    else
         url="$line"
         tag="$line"
     fi
