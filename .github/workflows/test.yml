@@ -1,0 +1,40 @@
+name: Test reporeq
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Run reporeq on itself
+      run: |
+        cd bin/
+        ./reporeq ../example.txt
+        
+    - name: Verify .reporeq directory exists
+      run: |
+        if [ -d "bin/.reporeq" ]; then
+          echo "✓ Success: .reporeq/ directory created"
+          ls -la bin/.reporeq/
+        else
+          echo "✗ Failed: .reporeq/ directory not found"
+          exit 1
+        fi
+        
+    - name: Verify bin symlinks created
+      run: |
+        if [ -d "bin/.reporeq/bin" ]; then
+          echo "✓ Success: .reporeq/bin/ directory created"
+          ls -la bin/.reporeq/bin/
+        else
+          echo "✗ Failed: .reporeq/bin/ directory not found"
+          exit 1
+        fi
