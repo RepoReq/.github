@@ -36,7 +36,8 @@ if [[ ! -f "$REQUIREMENTS_FILE" ]]; then
     exit 1
 fi
 
-readonly TEMP_DIR="$(mktemp -d -p .)"
+TEMP_DIR="$(mktemp -d -p .)"
+readonly TEMP_DIR
 
 mkdir -p "$TEMP_DIR/bin"
 
