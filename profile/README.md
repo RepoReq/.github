@@ -1,4 +1,4 @@
-# reporeq
+# RepoReq
 
 The simplest and last package manager you will ever use
 
