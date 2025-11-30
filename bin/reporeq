@@ -12,10 +12,38 @@ parse_line() {
     PARSE_URL="$line"
     PARSE_REF=""
 
+    # Handle SSH URLs (git@host:path) - split only on @ after the path
+    if [[ "$line" =~ ^git@[^:]+: ]]; then
+        # SSH URL: git@host:org/repo[@ref]
+        local path_part="${line#*:}"
+        if [[ "$path_part" == *@* ]]; then
+            PARSE_REF="${path_part##*@}"
+            PARSE_URL="${line%@*}"
+        fi
+        return
+    fi
+
+    # Handle HTTP(S) URLs - may contain user:pass@host
+    if [[ "$line" =~ ^https?:// ]]; then
+        # Strip protocol to find path
+        local without_proto="${line#*://}"
+        # Find path after host (first /)
+        if [[ "$without_proto" == */* ]]; then
+            local path_part="${without_proto#*/}"
+            # Look for @ only in path part (after first /)
+            if [[ "$path_part" == *@* ]]; then
+                PARSE_REF="${path_part##*@}"
+                PARSE_URL="${line%@*}"
+            fi
+        fi
+        return
+    fi
+
+    # Fallback for other URL schemes
     if [[ "$line" == *@* ]]; then
         PARSE_URL="${line%@*}"
         PARSE_REF="${line##*@}"
-        # SSH URLs contain : in the host part, reset if ref has :
+        # Reset if ref contains colon (likely part of URL)
         if [[ "$PARSE_REF" == *:* ]]; then
             PARSE_URL="$line"
             PARSE_REF=""
@@ -51,6 +79,16 @@ while IFS= read -r line || [[ -n "$line" ]]; do
 
     repo_name="$(basename "$url" .git)"
     dest="$TEMP_DIR/$repo_name"
+
+    # Clean up existing symlinks pointing to this repo (overlay support)
+    for link in "$TEMP_DIR/bin"/*; do
+        if [[ -L "$link" ]]; then
+            target="$(readlink "$link")"
+            if [[ "$target" == "../$repo_name/"* ]]; then
+                rm -f "$link"
+            fi
+        fi
+    done 2>/dev/null || true
 
     rm -rf "$dest"
 

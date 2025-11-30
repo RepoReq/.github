@@ -66,6 +66,26 @@ test_parse "git@gitlab.com:org/repo.git@develop/feature" \
 test_parse "https://github.com/user/repo.git@main" \
            "https://github.com/user/repo.git" "main"
 
+# HTTP URL with basic auth (user:pass@host) - NO ref
+test_parse "https://user:pass@github.com/org/repo" \
+           "https://user:pass@github.com/org/repo" ""
+
+# HTTP URL with basic auth AND ref
+test_parse "https://user:pass@github.com/org/repo@v1.0.0" \
+           "https://user:pass@github.com/org/repo" "v1.0.0"
+
+# HTTP URL with basic auth AND ref with slash
+test_parse "https://token:x-oauth@github.com/org/repo@feature/branch" \
+           "https://token:x-oauth@github.com/org/repo" "feature/branch"
+
+# HTTP URL without auth, no ref
+test_parse "https://github.com/user/repo" \
+           "https://github.com/user/repo" ""
+
+# HTTP URL with just username (no password)
+test_parse "https://token@github.com/org/repo@main" \
+           "https://token@github.com/org/repo" "main"
+
 echo
 echo "=== Results: $PASS passed, $FAIL failed ==="
 
