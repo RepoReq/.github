@@ -1,5 +1,5 @@
 #!/bin/bash
-# reporeq - Clone git repos from a requirements file
+# reporeq - The simplest and last package manager you will ever use
 # Usage: ./reporeq [reporeq.txt]
 set -euo pipefail
 

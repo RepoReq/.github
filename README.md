@@ -1,6 +1,6 @@
 # reporeq
 
-Clone git repos from a simple requirements file. That's it.
+The simplest and last package manager you will ever use
 
 ## Usage
 
