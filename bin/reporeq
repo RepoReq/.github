@@ -42,16 +42,12 @@ while IFS= read -r line || [[ -n "$line" ]]; do
     # Remove existing clone (overlay support)
     rm -rf "${TMP:?}/$name"
 
-    # Clone repository
     if [[ "$url" == "$tag" ]]; then
         echo ":: $name @ HEAD"
-        git clone -q --depth 1 "$url" "$TMP/$name" || exit 1
+        git clone -q "$url" "$TMP/$name" || exit 1
     else
         echo ":: $name @ $tag"
-        if ! git clone -q --depth 1 --branch "$tag" "$url" "$TMP/$name" 2>/dev/null; then
-            # Fallback: full clone + checkout (for SHA refs)
-            git clone -q "$url" "$TMP/$name" && git -C "$TMP/$name" checkout -q "$tag" || exit 1
-        fi
+        git clone -q "$url" "$TMP/$name" && git -C "$TMP/$name" checkout -q "$tag" || exit 1
     fi
 
     # Symlink executables from repo's bin/ directory
