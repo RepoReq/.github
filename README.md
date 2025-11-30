@@ -18,6 +18,7 @@ cd bin/
 https://github.com/user/repo@v1.0.0
 https://github.com/user/other@main
 https://github.com/user/repo@abc123def
+https://github.com/user/repo@feature/branch
 git@gitlab.com:org/private.git@v2.0.0
 ```
 
