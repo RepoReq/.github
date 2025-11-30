@@ -16,31 +16,110 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
-    - name: Run reporeq on itself
+
+    - name: Test basic clone
+      shell: bash
+      run: |
+        cd bin/
+        echo "https://github.com/reporeq/reporeq" > test1.txt
+        ./reporeq test1.txt
+        [ -d ".reporeq/reporeq" ] && echo "✓ Basic clone works"
+
+    - name: Cleanup test 1
+      shell: bash
+      run: rm -rf bin/.reporeq bin/test1.txt
+
+    - name: Test SHA checkout
+      shell: bash
+      run: |
+        cd bin/
+        echo "https://github.com/reporeq/reporeq@35316e9e99c4de8ccbda37950766a4aa707932f2" > test2.txt
+        ./reporeq test2.txt
+        actual_sha=$(git -C .reporeq/reporeq rev-parse HEAD)
+        expected="35316e9e99c4de8ccbda37950766a4aa707932f2"
+        if [ "$actual_sha" = "$expected" ]; then
+          echo "✓ SHA checkout works: $actual_sha"
+        else
+          echo "✗ SHA mismatch: expected $expected, got $actual_sha"
+          exit 1
+        fi
+
+    - name: Cleanup test 2
+      shell: bash
+      run: rm -rf bin/.reporeq bin/test2.txt
+
+    - name: Test comments and empty lines
+      shell: bash
+      run: |
+        cd bin/
+        cat > test3.txt << 'EOF'
+        # This is a comment
+        
+        https://github.com/reporeq/reporeq
+        # Another comment
+        
+        EOF
+        ./reporeq test3.txt
+        [ -d ".reporeq/reporeq" ] && echo "✓ Comments/empty lines handled correctly"
+
+    - name: Cleanup test 3
+      shell: bash
+      run: rm -rf bin/.reporeq bin/test3.txt
+
+    - name: Test overlay feature
+      shell: bash
+      run: |
+        cd bin/
+        cat > test4.txt << 'EOF'
+        https://github.com/reporeq/reporeq@35316e9e99c4de8ccbda37950766a4aa707932f2
+        https://github.com/reporeq/reporeq
+        EOF
+        ./reporeq test4.txt
+        actual_sha=$(git -C .reporeq/reporeq rev-parse HEAD)
+        first_sha="35316e9e99c4de8ccbda37950766a4aa707932f2"
+        if [ "$actual_sha" != "$first_sha" ]; then
+          echo "✓ Overlay works: later entry overwrote earlier"
+        else
+          echo "✗ Overlay failed: should have HEAD, got first SHA"
+          exit 1
+        fi
+
+    - name: Cleanup test 4
+      shell: bash
+      run: rm -rf bin/.reporeq bin/test4.txt
+
+    - name: Test failure on invalid URL
+      shell: bash
+      run: |
+        cd bin/
+        rm -rf .reporeq
+        echo "https://github.com/this-repo-does-not-exist-12345/invalid" > test5.txt
+        if ./reporeq test5.txt 2>/dev/null; then
+          echo "✗ Should have failed on invalid URL"
+          exit 1
+        fi
+        if [ -d ".reporeq" ]; then
+          echo "✗ .reporeq should not exist after failure"
+          exit 1
+        fi
+        echo "✓ Invalid URL correctly fails without leaving partial state"
+
+    - name: Cleanup test 5
+      shell: bash
+      run: rm -rf bin/.reporeq bin/test5.txt
+
+    - name: Test bin symlinks
       shell: bash
       run: |
         cd bin/
         ./reporeq ../example.txt
-        
-    - name: Verify .reporeq directory exists
-      shell: bash
-      run: |
-        if [ -d "bin/.reporeq" ]; then
-          echo "✓ Success: .reporeq/ directory created"
-          ls -la bin/.reporeq/
+        if [ -d ".reporeq/bin" ]; then
+          echo "✓ .reporeq/bin/ directory created"
+          ls -la .reporeq/bin/
+          if [ -L ".reporeq/bin/reporeq" ] || [ -f ".reporeq/bin/reporeq" ]; then
+            echo "✓ reporeq symlink exists"
+          fi
         else
-          echo "✗ Failed: .reporeq/ directory not found"
-          exit 1
-        fi
-        
-    - name: Verify bin symlinks created
-      shell: bash
-      run: |
-        if [ -d "bin/.reporeq/bin" ]; then
-          echo "✓ Success: .reporeq/bin/ directory created"
-          ls -la bin/.reporeq/bin/
-        else
-          echo "✗ Failed: .reporeq/bin/ directory not found"
+          echo "✗ .reporeq/bin/ directory not found"
           exit 1
         fi
