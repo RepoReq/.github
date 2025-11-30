@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# Unit tests for reporeq parse_line function
+
+set -euo pipefail
+
+# shellcheck source=./reporeq
+source "$(dirname "$0")/reporeq"
+
+PASS=0
+FAIL=0
+
+test_parse() {
+    local input="$1"
+    local expected_url="$2"
+    local expected_ref="$3"
+
+    parse_line "$input"
+
+    if [[ "$PARSE_URL" == "$expected_url" && "$PARSE_REF" == "$expected_ref" ]]; then
+        echo "✓ $input"
+        PASS=$((PASS + 1))
+    else
+        echo "✗ $input"
+        echo "  expected: url='$expected_url' ref='$expected_ref'"
+        echo "  got:      url='$PARSE_URL' ref='$PARSE_REF'"
+        FAIL=$((FAIL + 1))
+    fi
+}
+
+echo "=== Testing parse_line ==="
+echo
+
+# Basic URL without ref
+test_parse "https://github.com/user/repo" \
+           "https://github.com/user/repo" ""
+
+# URL with simple tag
+test_parse "https://github.com/user/repo@v1.0.0" \
+           "https://github.com/user/repo" "v1.0.0"
+
+# URL with SHA
+test_parse "https://github.com/user/repo@abc123def" \
+           "https://github.com/user/repo" "abc123def"
+
+# URL with branch containing slash
+test_parse "https://github.com/user/repo@feature/branch" \
+           "https://github.com/user/repo" "feature/branch"
+
+# URL with branch containing multiple slashes
+test_parse "https://github.com/user/repo@feature/sub/branch" \
+           "https://github.com/user/repo" "feature/sub/branch"
+
+# SSH URL without ref (has @ in URL itself)
+test_parse "git@github.com:user/repo.git" \
+           "git@github.com:user/repo.git" ""
+
+# SSH URL with tag
+test_parse "git@github.com:user/repo.git@v2.0.0" \
+           "git@github.com:user/repo.git" "v2.0.0"
+
+# SSH URL with branch containing slash
+test_parse "git@gitlab.com:org/repo.git@develop/feature" \
+           "git@gitlab.com:org/repo.git" "develop/feature"
+
+# URL ending with .git
+test_parse "https://github.com/user/repo.git@main" \
+           "https://github.com/user/repo.git" "main"
+
+echo
+echo "=== Results: $PASS passed, $FAIL failed ==="
+
+if [[ $FAIL -gt 0 ]]; then
+    exit 1
+fi

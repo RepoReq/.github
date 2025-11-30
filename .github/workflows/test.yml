@@ -30,6 +30,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Run shellcheck
+        if: runner.os == 'Linux'
+        run: shellcheck reporeq test_reporeq
+
+      - name: Unit tests (parse_line)
+        run: ./test_reporeq
+
       - name: Test basic clone
         run: |
           echo "https://github.com/reporeq/reporeq" > test.txt
@@ -113,4 +120,3 @@ jobs:
             echo "✗ .reporeq/bin/ directory not found"
             exit 1
           fi
-
