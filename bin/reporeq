@@ -26,7 +26,9 @@ while IFS= read -r line || [[ -n "$line" ]]; do
         git clone -q --depth 1 "$url" "$TMP/$name" || exit 1
     else
         echo ":: $name @ $tag"
-        git clone -q --depth 1 --branch "$tag" "$url" "$TMP/$name" || exit 1
+        if ! git clone -q --depth 1 --branch "$tag" "$url" "$TMP/$name" 2>/dev/null; then
+            git clone -q "$url" "$TMP/$name" && git -C "$TMP/$name" checkout -q "$tag" || exit 1
+        fi
     fi
     
     if [[ -d "$TMP/$name/bin" ]]; then
