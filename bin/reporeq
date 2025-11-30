@@ -13,6 +13,7 @@ mkdir -p "$TMP/bin"
 trap 'rm -rf "$TMP"' EXIT
 
 while IFS= read -r line || [[ -n "$line" ]]; do
+    line="${line%$'\r'}"
     [[ -z "$line" || "$line" =~ ^# ]] && continue
     url="${line%@*}"
     tag="${line#*@}"
