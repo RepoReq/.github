@@ -17,10 +17,11 @@ cd bin/
 ```
 https://github.com/user/repo@v1.0.0
 https://github.com/user/other@main
+https://github.com/user/repo@abc123def
 git@gitlab.com:org/private.git@v2.0.0
 ```
 
-- `URL@TAG` - clone at specific tag/branch
+- `URL@TAG` - clone at specific tag/branch/sha
 - `URL` alone - clone HEAD
 - Lines starting with `#` are comments
 - Empty lines are ignored
