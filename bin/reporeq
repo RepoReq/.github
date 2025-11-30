@@ -17,25 +17,18 @@ mkdir -p "$TMP/bin"
 
 while IFS= read -r line || [[ -n "$line" ]]; do
     line="${line%$'\r'}"
-    [[ -z "$line" || "$line" =~ ^# ]] && continue
+    [[ -z "$line" || "$line" == \#* ]] && continue
 
-    if [[ "$line" =~ ^git@ ]]; then
-        if [[ "$line" =~ ^(git@[^@]+)@([^@]+)$ ]]; then
-            url="${BASH_REMATCH[1]}"
-            tag="${BASH_REMATCH[2]}"
-        else
+    url="$line"
+    tag="$line"
+
+    if [[ "$line" == *@* ]]; then
+        url="${line%@*}"
+        tag="${line##*@}"
+        if [[ "$tag" == */* || "$tag" == *:* ]]; then
             url="$line"
             tag="$line"
         fi
-    elif [[ "$line" =~ ^(https?://[^@]*@[^/]+/[^@]+)@([^@]+)$ ]]; then
-        url="${BASH_REMATCH[1]}"
-        tag="${BASH_REMATCH[2]}"
-    elif [[ "$line" =~ ^([^@]+)@([^@]+)$ ]]; then
-        url="${BASH_REMATCH[1]}"
-        tag="${BASH_REMATCH[2]}"
-    else
-        url="$line"
-        tag="$line"
     fi
 
     name=$(basename "${url%.git}")
@@ -46,14 +39,14 @@ while IFS= read -r line || [[ -n "$line" ]]; do
         git clone -q "$url" "$TMP/$name" || exit 1
     else
         echo ":: $name @ $tag"
-        git clone -q "$url" "$TMP/$name" && git -C "$TMP/$name" checkout -q "$tag" || exit 1
+        git clone -q "$url" "$TMP/$name" || exit 1
+        git -C "$TMP/$name" checkout -q "$tag" || exit 1
     fi
 
     if [[ -d "$TMP/$name/bin" ]]; then
-        find "$TMP/$name/bin" -maxdepth 1 -type f -print0 | while IFS= read -r -d '' f; do
-            [[ -x "$f" ]] || continue
-            rel_path="../${f#"$TMP/"}"
-            ln -sf "$rel_path" "$TMP/bin/$(basename "$f")"
+        for f in "$TMP/$name/bin"/*; do
+            [[ -x "$f" && -f "$f" ]] || continue
+            ln -sf "../${f#"$TMP/"}" "$TMP/bin/$(basename "$f")"
         done
     fi
 done < "$REQS"
