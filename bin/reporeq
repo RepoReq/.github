@@ -1,42 +1,62 @@
 #!/bin/bash
 # reporeq - The simplest and last package manager you will ever use
 # Usage: ./reporeq [reporeq.txt]
+
 set -euo pipefail
 
-REQS="${1:-reporeq.txt}"
-DEST=".reporeq"
-TMP=".reporeq.tmp.$$"
+readonly REQS="${1:-reporeq.txt}"
+readonly DEST=".reporeq"
+readonly TMP=".reporeq.tmp.$$"
 
-[[ -f "$REQS" ]] || { echo "Error: $REQS not found"; exit 1; }
+# Validate input file exists
+if [[ ! -f "$REQS" ]]; then
+    echo "Error: $REQS not found" >&2
+    exit 1
+fi
 
+# Setup temp directory and cleanup trap
 mkdir -p "$TMP/bin"
 trap 'rm -rf "$TMP"' EXIT
 
+# Process each line in requirements file
 while IFS= read -r line || [[ -n "$line" ]]; do
+    # Strip carriage returns (Windows compatibility)
     line="${line%$'\r'}"
+
+    # Skip empty lines and comments
     [[ -z "$line" || "$line" =~ ^# ]] && continue
-    
+
+    # Parse URL and tag
     url="${line%@*}"
     tag="${line##*@}"
-    [[ "$line" =~ ^git@ ]] && [[ ! "$url" =~ : ]] && url="$line" tag="$line"
-    
+
+    # Handle SSH URLs without explicit tag (git@host:path format)
+    if [[ "$line" =~ ^git@ ]] && [[ ! "$url" =~ : ]]; then
+        url="$line"
+        tag="$line"
+    fi
+
+    # Extract repo name
     name=$(basename "${url%.git}")
-    
-    rm -rf "$TMP/$name"
-    
+
+    # Remove existing clone (overlay support)
+    rm -rf "${TMP:?}/$name"
+
+    # Clone repository
     if [[ "$url" == "$tag" ]]; then
         echo ":: $name @ HEAD"
         git clone -q --depth 1 "$url" "$TMP/$name" || exit 1
     else
         echo ":: $name @ $tag"
         if ! git clone -q --depth 1 --branch "$tag" "$url" "$TMP/$name" 2>/dev/null; then
+            # Fallback: full clone + checkout (for SHA refs)
             git clone -q "$url" "$TMP/$name" && git -C "$TMP/$name" checkout -q "$tag" || exit 1
         fi
     fi
-    
+
+    # Symlink executables from repo's bin/ directory
     if [[ -d "$TMP/$name/bin" ]]; then
-        find "$TMP/$name/bin" -maxdepth 1 -type f -print0 | \
-        while IFS= read -r -d '' f; do
+        find "$TMP/$name/bin" -maxdepth 1 -type f -print0 | while IFS= read -r -d '' f; do
             [[ -x "$f" ]] || continue
             rel_path="../${f#"$TMP/"}"
             ln -sf "$rel_path" "$TMP/bin/$(basename "$f")"
@@ -44,6 +64,7 @@ while IFS= read -r line || [[ -n "$line" ]]; do
     fi
 done < "$REQS"
 
+# Atomic swap: remove old, move new
 rm -rf "$DEST"
 mv "$TMP" "$DEST"
 trap - EXIT
