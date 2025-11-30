@@ -5,6 +5,7 @@ Clone git repos from a simple requirements file. That's it.
 ## Usage
 
 ```bash
+cd bin/
 ./reporeq              # reads reporeq.txt
 ./reporeq custom.txt   # reads custom.txt
 ```
